@@ -11,6 +11,8 @@ internal class SingleAnimatedBitmap(Stream stream, bool disposeStream) : IAnimat
 
     public bool IsFailed { get; private set; }
 
+    public bool IsCancellable { get; set; }
+
     public Size Size { get; private set; }
     
     public int FrameCount { get; private set; }
@@ -30,7 +32,7 @@ internal class SingleAnimatedBitmap(Stream stream, bool disposeStream) : IAnimat
     
     private Stream? _stream = stream ?? throw new ArgumentNullException(nameof(stream));
 
-    public async Task InitAsync()
+    public async Task InitAsync(CancellationToken token = default)
     {
         if (IsInitialized || IsFailed)
             return;
@@ -38,7 +40,7 @@ internal class SingleAnimatedBitmap(Stream stream, bool disposeStream) : IAnimat
         {
             if (_stream is null)
                 throw new NullReferenceException(nameof(_stream));
-            using var image = await Image.LoadAsync(_stream);
+            using var image = await Image.LoadAsync(_stream, token);
             if (disposeStream)
                 await _stream.DisposeAsync();
             _stream = null;
@@ -49,6 +51,8 @@ internal class SingleAnimatedBitmap(Stream stream, bool disposeStream) : IAnimat
 
             while (image.Frames.Count is not 1)
             {
+                if (token.IsCancellationRequested)
+                    throw new OperationCanceledException(token);
                 using var exportFrame = image.Frames.ExportFrame(0);
                 (frames[index], delays[index]) = await GetBitmapAndDelayAsync(exportFrame);
                 index++;
@@ -80,7 +84,7 @@ internal class SingleAnimatedBitmap(Stream stream, bool disposeStream) : IAnimat
             var delay = webpFrameMetadata.FrameDelay is var d && d < 1 ? 10 : (int) d;
 
             await using var ms = IAnimatedBitmap.RecyclableMemoryStreamManager.GetStream();
-            await frame.SaveAsync(ms, _bmpEncoder);
+            await frame.SaveAsync(ms, _bmpEncoder, token);
             ms.Position = 0;
             var bitmap = new Bitmap(ms);
             return (bitmap, delay);

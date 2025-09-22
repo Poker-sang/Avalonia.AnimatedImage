@@ -23,6 +23,8 @@ internal class AnimatedBitmapSimpleImpl : IAnimatedBitmap
 
     public bool IsFailed => false;
 
+    public bool IsCancellable { get; set; }
+
     public Size Size { get; } 
 
     public int FrameCount { get; }
@@ -36,5 +38,5 @@ internal class AnimatedBitmapSimpleImpl : IAnimatedBitmap
     
     public event EventHandler<AnimatedBitmapFailedEventArgs>? Failed;
     
-    public Task InitAsync() => Task.CompletedTask;
+    public Task InitAsync(CancellationToken token = default) => Task.CompletedTask;
 }

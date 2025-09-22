@@ -10,6 +10,8 @@ public class AnimatedImage : Control
 {
     private CompositionCustomVisual? _customVisual;
 
+    private CancellationTokenSource? _cancellationTokenSource;
+
     public static readonly StyledProperty<IAnimatedBitmap?> SourceProperty = AvaloniaProperty.Register<AnimatedImage, IAnimatedBitmap?>(name: nameof(Source), defaultValue: null);
 
     public static readonly StyledProperty<StretchDirection> StretchDirectionProperty = AvaloniaProperty.Register<AnimatedImage, StretchDirection>(nameof(StretchDirection), StretchDirection.Both);
@@ -72,7 +74,7 @@ public class AnimatedImage : Control
         _customVisual.SendHandlerMessage(CustomVisualHandler.StartMessage);
         
         if (Source is { IsInitialized: false, IsFailed: false } source)
-            await Task.Run(async () => await source.InitAsync());
+            await InitSourceAsync(source);
         _customVisual.SendHandlerMessage(Stretch);
         _customVisual.SendHandlerMessage(StretchDirection);
         if (Source is { IsInitialized: true })
@@ -107,7 +109,7 @@ public class AnimatedImage : Control
         else
         {
             if (Source is { IsInitialized: false, IsFailed: false } source)
-                await Task.Run(async () => await source.InitAsync());
+                await InitSourceAsync(source);
             if (Source is { IsInitialized: true })
                 _customVisual.SendHandlerMessage(newValue);
         }
@@ -125,6 +127,37 @@ public class AnimatedImage : Control
         _customVisual.Size = new Vector2((float) Bounds.Width, (float) Bounds.Height);
         _customVisual.Offset = Vector3.Zero;
     }
+
+    private async Task InitSourceAsync(IAnimatedBitmap source)
+    {
+        if (source.IsCancellable)
+        {
+            await Task.Run(async () => await source.InitAsync());
+            return;
+        }
+
+        if (_cancellationTokenSource is not null)
+        {
+            await _cancellationTokenSource.CancelAsync();
+            _cancellationTokenSource.Dispose();
+        }
+
+        _cancellationTokenSource = new();
+        try
+        {
+            await Task.Run(async () => await source.InitAsync(_cancellationTokenSource.Token));
+        }
+        catch
+        {
+            // ignored
+        }
+    }
+
+    ~AnimatedImage()
+    {
+        _cancellationTokenSource?.Cancel();
+        _cancellationTokenSource?.Dispose();
+    } 
 
     private class CustomVisualHandler : CompositionCustomVisualHandler
     {

@@ -8,6 +8,8 @@ public interface IAnimatedBitmap
     bool IsInitialized { get; }
 
     bool IsFailed { get; }
+
+    bool IsCancellable { get; set; }
     
     /// <summary>
     /// Gets the size of the image, in device independent pixels.
@@ -20,7 +22,7 @@ public interface IAnimatedBitmap
 
     IReadOnlyList<int> Delays { get; }
 
-    Task InitAsync();
+    Task InitAsync(CancellationToken token = default);
     
     event EventHandler? Initialized;
     
