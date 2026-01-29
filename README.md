@@ -1,10 +1,10 @@
 # Avalonia.AnimatedImage
 
-AnimatedImage control for [Avalonia](https://github.com/AvaloniaUI/Avalonia). Using [ImageSharp](https://github.com/SixLabors/ImageSharp) as the image decoder.
+AnimatedImage control for [Avalonia](https://github.com/AvaloniaUI/Avalonia). Using SKCodec as the image decoder.
 
 ![glance](./.github/GIF.gif)
 
-## Supported format (Same as ImageSharp)
+## Supported format (Same as SkiaSharp)
 
 * Animated WebP
 * APNG

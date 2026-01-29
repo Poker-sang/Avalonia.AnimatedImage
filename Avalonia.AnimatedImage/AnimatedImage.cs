@@ -1,8 +1,8 @@
+using System.Numerics;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Metadata;
 using Avalonia.Rendering.Composition;
-using System.Numerics;
 
 namespace Avalonia.AnimatedImage;
 
@@ -138,7 +138,7 @@ public class AnimatedImage : Control
 
         if (_cancellationTokenSource is not null)
         {
-            await _cancellationTokenSource.CancelAsync();
+            _cancellationTokenSource.Cancel();
             _cancellationTokenSource.Dispose();
         }
 

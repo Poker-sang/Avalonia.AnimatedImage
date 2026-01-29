@@ -29,14 +29,14 @@ internal class MultiAnimatedBitmap(IReadOnlyCollection<Stream> frameStreams, IRe
     public event EventHandler<AnimatedBitmapFailedEventArgs>? Failed;
 
     private List<Stream>? _frameStreams =
-        (frameStreams ?? throw new ArgumentNullException(nameof(frameStreams))).Count is 0
+        (frameStreams ?? throw new ArgumentNullException(nameof(frameStreams))).Count < 1
             ? throw new ArgumentException($"Invalid {nameof(frameStreams)}.Count")
             : [..frameStreams];
 
     private readonly IReadOnlyCollection<int> _delays =
         (IReadOnlyCollection<int>) [..delays] ?? throw new ArgumentNullException(nameof(delays));
 
-    public async Task InitAsync(CancellationToken token = default)
+    public void Init()
     {
         if (IsInitialized || IsFailed)
             return;
@@ -49,18 +49,16 @@ internal class MultiAnimatedBitmap(IReadOnlyCollection<Stream> frameStreams, IRe
             var index = 0;
             while (_frameStreams.Count > 0)
             {
-                if (token.IsCancellationRequested)
-                    throw new OperationCanceledException(token);
                 delays[index] = _delays.ElementAtOrDefault(index) is var delay && delay > 0 ? delay : 100;
                 var frameStream = _frameStreams[0];
                 try
                 {
-                    frames[index] = await Task.Run(() => new Bitmap(frameStream), token);
+                    frames[index] = new Bitmap(frameStream);
                 }
                 finally
                 {
                     if (disposeStream)
-                        await frameStream.DisposeAsync();
+                        frameStream.Dispose();
                 }
 
                 _frameStreams.RemoveAt(0);
@@ -80,7 +78,7 @@ internal class MultiAnimatedBitmap(IReadOnlyCollection<Stream> frameStreams, IRe
         {
             if (_frameStreams is not null && disposeStream)
                 foreach (var frameStream in _frameStreams)
-                    await frameStream.DisposeAsync();
+                    frameStream.Dispose();
             _frameStreams = null;
             IsFailed = true;
             Failed?.Invoke(this, new AnimatedBitmapFailedEventArgs(e));

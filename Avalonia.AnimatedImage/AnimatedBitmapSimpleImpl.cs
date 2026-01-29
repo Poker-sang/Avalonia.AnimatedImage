@@ -1,7 +1,10 @@
+using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using Avalonia.AnimatedImage;
 using Avalonia.Media.Imaging;
 
-namespace Avalonia.AnimatedImage;
+namespace Avalonia.Labs.AnimatedImage;
 
 internal class AnimatedBitmapSimpleImpl : IAnimatedBitmap
 {
@@ -11,11 +14,11 @@ internal class AnimatedBitmapSimpleImpl : IAnimatedBitmap
         ArgumentNullException.ThrowIfNull(delays);
         if (bitmaps.Count is var bitmapCount && delays.Count != bitmapCount)
             throw new ArgumentException($"{nameof(delays)} inconsistent count with {nameof(bitmaps)}");
-        if ((IReadOnlyList<Bitmap>) [..bitmaps] is not [var first, ..] bitmapsCopy)
+        if ((IReadOnlyList<Bitmap>) [.. bitmaps] is not [var first, ..] bitmapsCopy)
             throw new ArgumentException($"Invalid {nameof(delays)}.Count");
         Size = first.Size;
         Frames = bitmapsCopy;
-        Delays = [..delays];
+        Delays = [.. delays];
         FrameCount = bitmapCount;
     }
 
@@ -25,7 +28,7 @@ internal class AnimatedBitmapSimpleImpl : IAnimatedBitmap
 
     public bool IsCancellable { get; set; }
 
-    public Size Size { get; } 
+    public Size Size { get; }
 
     public int FrameCount { get; }
 
@@ -35,8 +38,10 @@ internal class AnimatedBitmapSimpleImpl : IAnimatedBitmap
     public IReadOnlyList<int> Delays { get; }
 
     public event EventHandler? Initialized;
-    
+
     public event EventHandler<AnimatedBitmapFailedEventArgs>? Failed;
-    
-    public Task InitAsync(CancellationToken token = default) => Task.CompletedTask;
+
+    public void Init()
+    {
+    }
 }
