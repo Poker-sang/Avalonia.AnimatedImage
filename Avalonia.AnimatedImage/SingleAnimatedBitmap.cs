@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Avalonia.Media.Imaging;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Bmp;
+using Avalonia.Platform;
+using SkiaSharp;
 
 namespace Avalonia.AnimatedImage;
 
@@ -32,7 +32,7 @@ internal class SingleAnimatedBitmap(Stream stream, bool disposeStream) : IAnimat
     
     private Stream? _stream = stream ?? throw new ArgumentNullException(nameof(stream));
 
-    public async Task InitAsync(CancellationToken token = default)
+    public void Init()
     {
         if (IsInitialized || IsFailed)
             return;
@@ -40,27 +40,33 @@ internal class SingleAnimatedBitmap(Stream stream, bool disposeStream) : IAnimat
         {
             if (_stream is null)
                 throw new NullReferenceException(nameof(_stream));
-            using var image = await Image.LoadAsync(_stream, token);
-            if (disposeStream)
-                await _stream.DisposeAsync();
-            _stream = null;
 
-            var delays = new int[image.Frames.Count];
-            var frames = new Bitmap[image.Frames.Count];
-            var index = 0;
+            if (_stream.CanSeek)
+                _stream.Position = 0;
 
-            while (image.Frames.Count is not 1)
+            using var skCodec = SKCodec.Create(_stream);
+            if (skCodec is null)
+                throw new InvalidOperationException($"Unable to create {nameof(SKCodec)} from the provided stream.");
+
+            var imageInfo = skCodec.Info;
+            var targetInfo = new SKImageInfo(imageInfo.Width, imageInfo.Height, SKColorType.Bgra8888, SKAlphaType.Premul);
+            var frameCount = Math.Max(skCodec.FrameCount, 1);
+            var delays = new int[frameCount];
+            var frames = new Bitmap[frameCount];
+            var frameInfos = skCodec.FrameInfo;
+
+            for (var index = 0; index < frameCount; index++)
             {
-                if (token.IsCancellationRequested)
-                    throw new OperationCanceledException(token);
-                using var exportFrame = image.Frames.ExportFrame(0);
-                (frames[index], delays[index]) = await GetBitmapAndDelayAsync(exportFrame);
-                index++;
+                var frameInfo = frameInfos.Length > index ? frameInfos[index] : default;
+                delays[index] = frameInfo.Duration > 0 ? frameInfo.Duration : 100;
+                frames[index] = DecodeFrame(skCodec, targetInfo, index);
             }
 
-            (frames[index], delays[index]) = await GetBitmapAndDelayAsync(image);
+            if (disposeStream)
+                _stream.Dispose();
+            _stream = null;
 
-            Size = new Size(image.Size.Width, image.Size.Height);
+            Size = new Size(imageInfo.Width, imageInfo.Height);
             FrameCount = delays.Length;
             Delays = delays;
             Frames = frames;
@@ -70,30 +76,27 @@ internal class SingleAnimatedBitmap(Stream stream, bool disposeStream) : IAnimat
         catch (Exception e)
         {
             if (_stream is not null && disposeStream)
-                await _stream.DisposeAsync();
+                _stream.Dispose();
             _stream = null;
             IsFailed = true;
             Failed?.Invoke(this, new AnimatedBitmapFailedEventArgs(e));
         }
-
-        return;
-
-        async Task<(Bitmap Bitmap, int Delay)> GetBitmapAndDelayAsync(Image frame)
-        {
-            var webpFrameMetadata = frame.Frames.RootFrame.Metadata.GetWebpMetadata();
-            var delay = webpFrameMetadata.FrameDelay is var d && d < 1 ? 10 : (int) d;
-
-            await using var ms = IAnimatedBitmap.RecyclableMemoryStreamManager.GetStream();
-            await frame.SaveAsync(ms, _bmpEncoder, token);
-            ms.Position = 0;
-            var bitmap = new Bitmap(ms);
-            return (bitmap, delay);
-        }
     }
 
-    private readonly BmpEncoder _bmpEncoder = new()
+    private static Bitmap DecodeFrame(SKCodec codec, SKImageInfo imageInfo, int frameIndex)
     {
-        BitsPerPixel = BmpBitsPerPixel.Pixel32,
-        SupportTransparency = true
-    };
+        using var bitmap = new SKBitmap(imageInfo);
+        var options = new SKCodecOptions(frameIndex);
+        var result = codec.GetPixels(imageInfo, bitmap.GetPixels(), options);
+        if (result is not SKCodecResult.Success and not SKCodecResult.IncompleteInput)
+            throw new InvalidOperationException($"Failed to decode frame {frameIndex}: {result}.");
+
+        return new Bitmap(
+            PixelFormat.Bgra8888,
+            AlphaFormat.Premul,
+            bitmap.GetPixels(),
+            new PixelSize(imageInfo.Width, imageInfo.Height),
+            new Vector(96, 96),
+            bitmap.RowBytes);
+    }
 }

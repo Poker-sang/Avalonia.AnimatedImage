@@ -1,5 +1,4 @@
 using Avalonia.Media.Imaging;
-using Microsoft.IO;
 
 namespace Avalonia.AnimatedImage;
 
@@ -22,13 +21,11 @@ public interface IAnimatedBitmap
 
     IReadOnlyList<int> Delays { get; }
 
-    Task InitAsync(CancellationToken token = default);
+    void Init();
     
     event EventHandler? Initialized;
     
     event EventHandler<AnimatedBitmapFailedEventArgs>? Failed;
-
-    static sealed RecyclableMemoryStreamManager RecyclableMemoryStreamManager { get; set; } = new();
 
     static IAnimatedBitmap Load(Stream stream, bool disposeStream)
         => new SingleAnimatedBitmap(stream, disposeStream);

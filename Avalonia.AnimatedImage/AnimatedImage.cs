@@ -1,8 +1,8 @@
+using System.Numerics;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Metadata;
 using Avalonia.Rendering.Composition;
-using System.Numerics;
 
 namespace Avalonia.AnimatedImage;
 
@@ -12,7 +12,7 @@ public class AnimatedImage : Control
 
     private CancellationTokenSource? _cancellationTokenSource;
 
-    public static readonly StyledProperty<IAnimatedBitmap?> SourceProperty = AvaloniaProperty.Register<AnimatedImage, IAnimatedBitmap?>(name: nameof(Source), defaultValue: null);
+    public static readonly StyledProperty<IAnimatedBitmap?> SourceProperty = AvaloniaProperty.Register<AnimatedImage, IAnimatedBitmap?>(nameof(Source), defaultValue: null);
 
     public static readonly StyledProperty<StretchDirection> StretchDirectionProperty = AvaloniaProperty.Register<AnimatedImage, StretchDirection>(nameof(StretchDirection), StretchDirection.Both);
 
@@ -132,7 +132,7 @@ public class AnimatedImage : Control
     {
         if (source.IsCancellable)
         {
-            await Task.Run(async () => await source.InitAsync());
+            await Task.Run(source.Init);
             return;
         }
 
@@ -145,7 +145,7 @@ public class AnimatedImage : Control
         _cancellationTokenSource = new();
         try
         {
-            await Task.Run(async () => await source.InitAsync(_cancellationTokenSource.Token));
+            await Task.Run(source.Init, _cancellationTokenSource.Token);
         }
         catch
         {
