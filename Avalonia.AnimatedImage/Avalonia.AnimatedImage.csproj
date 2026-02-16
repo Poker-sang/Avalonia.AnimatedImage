@@ -8,8 +8,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Avalonia" Version="11.3.11" />
-        <PackageReference Include="Avalonia.Skia" Version="11.3.11" />
+        <PackageReference Include="Avalonia" Version="11.3.12" />
+        <PackageReference Include="Avalonia.Skia" Version="11.3.12" />
     </ItemGroup>
 
 </Project>
