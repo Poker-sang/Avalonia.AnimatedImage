@@ -19,11 +19,13 @@ internal class AnimatedBitmapSimpleImpl : IAnimatedBitmap
         FrameCount = bitmapCount;
     }
 
-    public bool IsInitialized => true;
+    public bool IsInitialized { get; set; } = true;
 
     public bool IsFailed => false;
 
     public bool IsCancellable { get; set; }
+
+    public bool IsDisposed { get; set; }
 
     public Size Size { get; }
 
